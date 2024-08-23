@@ -26,9 +26,8 @@ from litedram.phy import GENSDRPHY, HalfRateGENSDRPHY
 
 from litex.soc.interconnect import wishbone
 
-from litex.soc.cores.dma import WishboneDMAReader
-
 from modules.udp_core import UdpCore
+from modules.udp_dma import UdpWishboneDMAReader
 
 # CRG ----------------------------------------------------------------------------------------------
 
@@ -166,18 +165,20 @@ class BaseSoC(SoCCore):
                 addressing="byte"
             )
 
-            self.wb_udp_tx_dma = WishboneDMAReader(bus=self.udp_rd_if, with_csr=True)
+            self.wb_udp_tx_dma = UdpWishboneDMAReader(bus=self.udp_rd_if)
             self.bus.add_master(name="udp_rd", master=self.udp_rd_if)
 
             self.upd_core = UdpCore(
-                clock_pads = self.platform.request("eth_clocks", eth_phy),
-                pads       = self.platform.request("eth", eth_phy),
+                platform   = self.platform,
+                eth_phy    = eth_phy,
                 cd50       = self.crg.cd_sys,
                 cd125      = self.crg.cd_eth_125,
                 ip         = eth_ip,
                 subnetmask = eth_subn,
                 mac        = eth_mac
             )
+
+            self.comb += self.wb_udp_tx_dma.source.connect(self.upd_core.tx)
 
         # Leds -------------------------------------------------------------------------------------
         # Disable leds when serial is used.
@@ -214,7 +215,7 @@ def main():
     parser = LiteXArgumentParser(platform=colorlight_5a_75b.Platform, description="LiteX SoC on Colorlight 5A-75X.")
     parser.add_target_argument("--board",             default="5a-75b",         help="Board type (5a-75b, 5a-75e or i5a-907).")
     parser.add_target_argument("--revision",          default="7.0",            help="Board revision (6.0, 6.1, 7.0 or 8.0).")
-    parser.add_target_argument("--sys-clk-freq",      default=60e6, type=float, help="System clock frequency.")
+    parser.add_target_argument("--sys-clk-freq",      default=50e6, type=float, help="System clock frequency.")
     ethopts = parser.target_group.add_mutually_exclusive_group()
     ethopts.add_argument("--with-ethernet",           action="store_true",          help="Enable Ethernet support.")
     parser.add_target_argument("--eth-ip",            default="192.168.1.50",       help="Ethernet/Etherbone IP address.")

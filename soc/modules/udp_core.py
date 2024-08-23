@@ -33,13 +33,16 @@ def str_ip4_to_num(x:str) -> int:
     return reduce(lambda x,y: x|y, map(lambda ix: (int(ix[1]) << (8 * ix[0])), enumerate(reversed(x.split(".")))))
 
 class UdpCore(LiteXModule):
-    def __init__(self, pads:Record, clock_pads:Record, cd50:ClockDomain, cd125:ClockDomain, mac:str, ip:str, subnetmask:str):
+    def __init__(self, platform, eth_phy:int, cd50:ClockDomain, cd125:ClockDomain, mac:str, ip:str, subnetmask:str):
         self.mac = Constant(int(mac.replace(":", ""), 16))
         self.ip  = Constant(str_ip4_to_num(ip))
         self.sbm = Constant(str_ip4_to_num(subnetmask))
 
         self.tx = stream.Endpoint(udp_stream_descr())
         self.rx = stream.Endpoint(udp_stream_descr())
+
+        clock_pads = platform.request("eth_clocks", eth_phy)
+        pads       = platform.request("eth", eth_phy)
 
         if cd50.name == "sys":
             pass
@@ -79,9 +82,9 @@ class UdpCore(LiteXModule):
             # upd out
             o_udp_out_fwd_valid         = self.rx.valid,
             o_udp_out_fwd_data          = self.rx.data,
-            o_udp_out_fwd_last          = Constant(0b11),
+            #o_udp_out_fwd_last          = TODO
             o_udp_out_fwd_last_valid    = self.rx.last,
-            o_udp_out_fwd_abort         = Constant(0b0),
+            #o_udp_out_fwd_abort         = TODO
             i_udp_out_ready             = self.rx.ready,
 
             o_udp_out_fwd_ip            = self.rx.ip_address,
@@ -90,3 +93,17 @@ class UdpCore(LiteXModule):
             o_udp_out_fwd_dst_port      = self.rx.dst_port
         )
 
+        # Add Verilog sources.
+        # --------------------
+        self.add_sources(platform)
+
+
+    @staticmethod
+    def add_sources(platform):
+        core_files = "modules/verilog/udp"
+        if not os.path.exists(core_files):
+            raise NotImplementedError("TODO: implement generation from submodule")
+        platform.add_source_dir(core_files)
+
+    def do_finalize(self):
+        self.specials += Instance("udpCore", **self.udp_core_params)
