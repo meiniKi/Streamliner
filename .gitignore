@@ -1,0 +1,4 @@
+soc/build
+tst.ipynb
+*.pyc
+soc/modules/verilog/udpCore.v

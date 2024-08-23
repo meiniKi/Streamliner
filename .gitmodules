@@ -1,0 +1,3 @@
+[submodule "clash-ethernet"]
+	path = clash-ethernet
+	url = git@github.com:meiniKi/clash-ethernet.git
