@@ -1,6 +1,5 @@
 #
-# This file is part of LiteX.
-#
+# Modified from
 # Copyright (c) 2020-2021 Florent Kermarrec <florent@enjoy-digital.fr>
 # SPDX-License-Identifier: BSD-2-Clause
 
@@ -51,6 +50,8 @@ class UdpWishboneDMAReader(LiteXModule):
         # # #
 
         # FIFO..
+        # TODO eth_50 can be any frequency as long as 4*cyc>125Mhz; CDC may not be needed
+        #
         self.fifo = fifo = ClockDomainsRenamer({"write": "sys", "read": "eth_50"})(stream.AsyncFIFO([("data", bus.data_width)], depth=fifo_depth))
 
 
