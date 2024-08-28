@@ -51,7 +51,8 @@ class UdpWishboneDMAReader(LiteXModule):
         # # #
 
         # FIFO..
-        self.fifo = fifo = stream.SyncFIFO([("data", bus.data_width)], depth=fifo_depth)
+        self.fifo = fifo = ClockDomainsRenamer({"write": "sys", "read": "eth_50"})(stream.AsyncFIFO([("data", bus.data_width)], depth=fifo_depth))
+
 
         # Reads -> FIFO.
         self.comb += [

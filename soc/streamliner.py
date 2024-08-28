@@ -172,7 +172,7 @@ class BaseSoC(SoCCore):
             self.upd_core = UdpCore(
                 platform   = self.platform,
                 eth_phy    = eth_phy,
-                cd50       = self.crg.cd_sys,
+                cd50       = self.crg.cd_eth_50,
                 cd125      = self.crg.cd_eth_125,
                 ip         = eth_ip,
                 subnetmask = eth_subn,
@@ -235,7 +235,7 @@ class BaseSoC(SoCCore):
 
             self.submodules.analyzer = LiteScopeAnalyzer(analyzer_signals,
                 depth        = 4096,
-                clock_domain = "sys",
+                clock_domain = "eth_50",
                 samplerate   = self.sys_clk_freq,
                 csr_csv      = "analyzer.csv")
             self.add_csr("analyzer")
@@ -249,7 +249,7 @@ def main():
     parser = LiteXArgumentParser(platform=colorlight_5a_75b.Platform, description="LiteX SoC on Colorlight 5A-75X.")
     parser.add_target_argument("--board",             default="5a-75b",         help="Board type (5a-75b, 5a-75e or i5a-907).")
     parser.add_target_argument("--revision",          default="7.0",            help="Board revision (6.0, 6.1, 7.0 or 8.0).")
-    parser.add_target_argument("--sys-clk-freq",      default=50e6, type=float, help="System clock frequency.")
+    parser.add_target_argument("--sys-clk-freq",      default=60e6, type=float, help="System clock frequency.")
     ethopts = parser.target_group.add_mutually_exclusive_group()
     ethopts.add_argument("--with-ethernet",           action="store_true",          help="Enable Ethernet support.")
     parser.add_target_argument("--eth-ip",            default="192.168.1.50",       help="Ethernet/Etherbone IP address.")

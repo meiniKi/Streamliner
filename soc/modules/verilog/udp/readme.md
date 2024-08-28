@@ -1,0 +1,6 @@
+
+add verilog files udp core from clash-ethernet here
+
+udpCore.v
+Clash_Lattice_ECP5_Colorlight_UdpCore_udpCore_trueDualPortBlockRamWrapper.v
+Clash_Lattice_ECP5_Colorlight_UdpCore_udpCore_trueDualPortBlockRamWrapper_0.v

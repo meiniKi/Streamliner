@@ -1,7 +1,7 @@
 soc/build
 tst.ipynb
 *.pyc
-soc/modules/verilog/
+soc/modules/verilog/udp/*.v
 *.csv
 *.json
 *.vcd

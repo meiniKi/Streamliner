@@ -44,11 +44,6 @@ class UdpCore(LiteXModule):
         clock_pads = platform.request("eth_clocks", eth_phy)
         pads       = platform.request("eth", eth_phy)
 
-        if cd50.name == "sys":
-            pass
-        else:
-            raise NotImplementedError("TODO: CDC for eth")
-
         self.udp_core_params = dict(
             # generic
             i_clk50         = cd50.clk,
