@@ -166,12 +166,8 @@ class BaseSoC(SoCCore):
         if with_ethernet:
             self.udp_rd_if = wishbone.Interface(
                 data_width=self.bus.data_width,
-                adr_width=self.bus.address_width,
-                addressing="byte"
+                adr_width=self.bus.address_width
             )
-
-            self.wb_udp_tx_dma = UdpWishboneDMAReader(bus=self.udp_rd_if)
-            self.bus.add_master(name="udp_rd", master=self.udp_rd_if)
 
             self.upd_core = UdpCore(
                 platform   = self.platform,
@@ -183,7 +179,8 @@ class BaseSoC(SoCCore):
                 mac        = eth_mac
             )
 
-            self.comb += self.wb_udp_tx_dma.source.connect(self.upd_core.tx)
+            self.bus.add_master(name="udp_rd", master=self.udp_rd_if)
+            self.wb_udp_tx_dma = UdpWishboneDMAReader(bus=self.udp_rd_if, udp_sink=self.upd_core.sink)
 
         # Leds -------------------------------------------------------------------------------------
         # Disable leds when serial is used.
@@ -214,21 +211,34 @@ class BaseSoC(SoCCore):
 
 
         # LiteScope Analyzer -----------------------------------------------------------------------
-        analyzer_signals = [
-            self.wb_udp_tx_dma._enable.storage,
-            self.wb_udp_tx_dma._done.status,
-            self.udp_rd_if.stb,
-            self.udp_rd_if.stb,
-            self.udp_rd_if.ack,
-            self.udp_rd_if.adr
-        ]
+        if False:
+            analyzer_signals = [
+                # Cntrl / Status
+                self.wb_udp_tx_dma._enable.storage,
+                self.wb_udp_tx_dma._done.status,
+                # Bus Master Interface
+                self.udp_rd_if.stb,
+                self.udp_rd_if.ack,
+                self.udp_rd_if.adr,
+                # Fifo sink
+                self.wb_udp_tx_dma.fifo.fifo.writable,
+                self.wb_udp_tx_dma.fifo.fifo.we,
+                self.wb_udp_tx_dma.fifo.fifo.readable,
+                self.wb_udp_tx_dma.fifo.fifo.re,
+                # UDP
+                self.upd_core.sink.valid,
+                self.upd_core.sink.ready,
+                self.upd_core.sink.data,
+                self.upd_core.sink.first,
+                self.upd_core.sink.last
+            ]
 
-        self.submodules.analyzer = LiteScopeAnalyzer(analyzer_signals,
-            depth        = 2048,
-            clock_domain = "sys",
-            samplerate   = self.sys_clk_freq,
-            csr_csv      = "analyzer.csv")
-        self.add_csr("analyzer")
+            self.submodules.analyzer = LiteScopeAnalyzer(analyzer_signals,
+                depth        = 4096,
+                clock_domain = "sys",
+                samplerate   = self.sys_clk_freq,
+                csr_csv      = "analyzer.csv")
+            self.add_csr("analyzer")
 
 
 

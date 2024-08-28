@@ -15,7 +15,6 @@ from litex.soc.interconnect.csr import *
 from litex.soc.interconnect import stream
 from litex.soc.interconnect import wishbone
 
-from modules.udp_core import udp_stream_descr
 
 # Helpers ------------------------------------------------------------------------------------------
 
@@ -42,12 +41,10 @@ class UdpWishboneDMAReader(LiteXModule):
     source : Record("data")
         Source for MMAP word results from reading.
     """
-    def __init__(self, bus, endianness="little", fifo_depth=16):
+    def __init__(self, bus, udp_sink, endianness="little", fifo_depth=16):
         assert isinstance(bus, wishbone.Interface)
         self.bus            = bus
         self.sink           = sink          = stream.Endpoint([("address", bus.adr_width, ("last", 1))])
-        self.source_fifo    = source_fifo   = stream.Endpoint([("data",    bus.data_width)])
-        self.source         = source        = stream.Endpoint(udp_stream_descr())
 
         self.add_csr()
 
@@ -63,6 +60,7 @@ class UdpWishboneDMAReader(LiteXModule):
             bus.we.eq(0),
             bus.sel.eq(2**(bus.data_width//8)-1),
             bus.adr.eq(sink.address),
+
             fifo.sink.last.eq(sink.last),
             fifo.sink.data.eq(format_bytes(bus.dat_r, endianness)),
             If(bus.stb & bus.ack,
@@ -71,26 +69,21 @@ class UdpWishboneDMAReader(LiteXModule):
             ),
         ]
 
-        # FIFO -> Output.
-        self.comb += fifo.source.connect(source_fifo)
-
-        # Add parameter to Endpoint
-        #self.comb += source.connect(source_fifo, omit=[]) # TODO use omit
+        # FIFO -> Output
         self.comb += [
-            source.valid.eq(source_fifo.valid),
-            source.ready.eq(source_fifo.ready),
-            source.first.eq(source_fifo.first),
-            source.last.eq(source_fifo.last),
-            source.payload.data.eq(source_fifo.payload.data),
-            
-            source.param.src_port.eq(self._srcdst_port.storage[ 0:15]),
-            source.param.dst_port.eq(self._srcdst_port.storage[16:31]),
-            source.param.ip_address.eq(self._dst_ip.storage),
-            source.param.length.eq(self._length.storage)
+            fifo.source.ready.eq(udp_sink.ready),
+            udp_sink.valid.eq(fifo.source.valid),
+            udp_sink.first.eq(fifo.source.first),
+            udp_sink.last.eq(fifo.source.last),
+            udp_sink.payload.data.eq(fifo.source.payload.data),
+            udp_sink.param.src_port.eq(self._srcdst_port.storage[ 0:15]),
+            udp_sink.param.dst_port.eq(self._srcdst_port.storage[16:31]),
+            udp_sink.param.ip_address.eq(self._dst_ip.storage),
+            udp_sink.param.length.eq(self._length.storage)
         ]
 
     def add_csr(self, default_base=0, default_length=0, default_enable=0, default_loop=0):
-        self._base          = CSRStorage(64, reset=default_base)
+        self._base          = CSRStorage(32, reset=default_base)
         self._length        = CSRStorage(32, reset=default_length)
         self._enable        = CSRStorage(reset=default_enable)
         self._done          = CSRStatus()

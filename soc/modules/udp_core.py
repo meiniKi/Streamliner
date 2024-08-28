@@ -38,8 +38,8 @@ class UdpCore(LiteXModule):
         self.ip  = Constant(str_ip4_to_num(ip))
         self.sbm = Constant(str_ip4_to_num(subnetmask))
 
-        self.tx = stream.Endpoint(udp_stream_descr())
-        self.rx = stream.Endpoint(udp_stream_descr())
+        self.sink = stream.Endpoint(udp_stream_descr())
+        self.source = stream.Endpoint(udp_stream_descr())
 
         clock_pads = platform.request("eth_clocks", eth_phy)
         pads       = platform.request("eth", eth_phy)
@@ -67,30 +67,30 @@ class UdpCore(LiteXModule):
             i_ip            = self.ip,
             i_subnetmask    = self.sbm,
             # upd in
-            i_udp_in_fwd_valid      = self.tx.valid,
-            i_udp_in_fwd_data       = self.tx.data,
+            i_udp_in_fwd_valid      = self.sink.valid,
+            i_udp_in_fwd_data       = self.sink.data,
             i_udp_in_fwd_last       = Constant(0b11), # TODO, only x*word-length now
-            i_udp_in_fwd_last_valid = self.tx.last,
+            i_udp_in_fwd_last_valid = self.sink.last,
             i_udp_in_fwd_abort      = Constant(0b0),
-            o_udp_in_ready          = self.tx.ready,
+            o_udp_in_ready          = self.sink.ready,
 
-            i_udp_in_fwd_ip         = self.tx.ip_address,
-            i_udp_in_fwd_length     = self.tx.length,
-            i_udp_in_fwd_src_port   = self.tx.src_port,
-            i_udp_in_fwd_dst_port   = self.tx.dst_port,
+            i_udp_in_fwd_ip         = self.sink.ip_address,
+            i_udp_in_fwd_length     = self.sink.length,
+            i_udp_in_fwd_src_port   = self.sink.src_port,
+            i_udp_in_fwd_dst_port   = self.sink.dst_port,
 
             # upd out
-            o_udp_out_fwd_valid         = self.rx.valid,
-            o_udp_out_fwd_data          = self.rx.data,
+            o_udp_out_fwd_valid         = self.source.valid,
+            o_udp_out_fwd_data          = self.source.data,
             #o_udp_out_fwd_last          = TODO
-            o_udp_out_fwd_last_valid    = self.rx.last,
+            o_udp_out_fwd_last_valid    = self.source.last,
             #o_udp_out_fwd_abort         = TODO
-            i_udp_out_ready             = self.rx.ready,
+            i_udp_out_ready             = self.source.ready,
 
-            o_udp_out_fwd_ip            = self.rx.ip_address,
-            o_udp_out_fwd_length        = self.rx.length,
-            o_udp_out_fwd_src_port      = self.rx.src_port,
-            o_udp_out_fwd_dst_port      = self.rx.dst_port
+            o_udp_out_fwd_ip            = self.source.ip_address,
+            o_udp_out_fwd_length        = self.source.length,
+            o_udp_out_fwd_src_port      = self.source.src_port,
+            o_udp_out_fwd_dst_port      = self.source.dst_port
         )
 
         # Add Verilog sources.

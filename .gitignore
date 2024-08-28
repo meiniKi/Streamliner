@@ -5,3 +5,4 @@ soc/modules/verilog/
 *.csv
 *.json
 *.vcd
+__pycache__
