@@ -13,6 +13,7 @@ from litex.gen import *
 from litex.build.io import DDROutput
 
 from litex_boards.platforms import colorlight_5a_75b, colorlight_5a_75e, colorlight_i5a_907
+import colorlight_mod
 
 from litex.soc.cores.clock import *
 from litex.soc.cores.spi_flash import ECP5SPIFlash
@@ -28,6 +29,8 @@ from litex.soc.interconnect import wishbone
 
 from modules.udp_core import UdpCore
 from modules.udp_dma import UdpWishboneDMAReader
+
+from litescope import LiteScopeAnalyzer
 
 # CRG ----------------------------------------------------------------------------------------------
 
@@ -107,8 +110,10 @@ class BaseSoC(SoCCore):
         with_spi_flash   = False,
         **kwargs):
         board = board.lower()
-        assert board in ["5a-75b", "5a-75e", "i5a-907"]
-        if board == "5a-75b":
+        assert board in ["5a-75b", "5a-75e", "i5a-907", "colorlight_mod"]
+        if board == "colorlight_mod":
+            platform = colorlight_mod.Platform(revision=revision, toolchain=toolchain)
+        elif board == "5a-75b":
             platform = colorlight_5a_75b.Platform(revision=revision, toolchain=toolchain)
         elif board == "5a-75e":
             platform = colorlight_5a_75e.Platform(revision=revision, toolchain=toolchain)
@@ -119,7 +124,7 @@ class BaseSoC(SoCCore):
             assert use_internal_osc, "You cannot use the 25MHz clock as system clock since it is provided by the Ethernet PHY and will stop during PHY reset."
 
         # CRG --------------------------------------------------------------------------------------
-        with_rst     = kwargs["uart_name"] not in ["serial", "crossover"] # serial_rx shared with user_btn_n.
+        with_rst     = False # kwargs["uart_name"] not in ["serial", "crossover"] # serial_rx shared with user_btn_n.
         if board == "i5a-907":
             with_rst = True
         with_usb_pll = kwargs.get("uart_name", None) == "usb_acm"
@@ -136,7 +141,7 @@ class BaseSoC(SoCCore):
         # SoCCore ----------------------------------------------------------------------------------
         # Uartbone ---------------------------------------------------------------------------------
         if kwargs["with_uartbone"]:
-            if board != "i5a-907":
+            if board not in ["i5a-907", "colorlight_mod"]:
                 raise ValueError("uartbone only supported on i5a-907")
 
         SoCCore.__init__(self, platform, int(sys_clk_freq), ident="LiteX SoC on Colorlight " + board.upper(), **kwargs)
@@ -161,7 +166,7 @@ class BaseSoC(SoCCore):
         if with_ethernet:
             self.udp_rd_if = wishbone.Interface(
                 data_width=self.bus.data_width,
-                adr_width=self.bus.data_width,
+                adr_width=self.bus.address_width,
                 addressing="byte"
             )
 
@@ -208,6 +213,25 @@ class BaseSoC(SoCCore):
             self.add_spi_flash(mode="1x", module=SpiFlashModule(SpiNorFlashOpCodes.READ_1_1_1), with_master=False)
 
 
+        # LiteScope Analyzer -----------------------------------------------------------------------
+        analyzer_signals = [
+            self.wb_udp_tx_dma._enable.storage,
+            self.wb_udp_tx_dma._done.status,
+            self.udp_rd_if.stb,
+            self.udp_rd_if.stb,
+            self.udp_rd_if.ack,
+            self.udp_rd_if.adr
+        ]
+
+        self.submodules.analyzer = LiteScopeAnalyzer(analyzer_signals,
+            depth        = 2048,
+            clock_domain = "sys",
+            samplerate   = self.sys_clk_freq,
+            csr_csv      = "analyzer.csv")
+        self.add_csr("analyzer")
+
+
+
 # Build --------------------------------------------------------------------------------------------
 
 def main():
@@ -251,3 +275,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

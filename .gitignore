@@ -2,3 +2,6 @@ soc/build
 tst.ipynb
 *.pyc
 soc/modules/verilog/
+*.csv
+*.json
+*.vcd
